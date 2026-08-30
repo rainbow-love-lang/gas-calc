@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2a6df4">
+<meta name="robots" content="noindex">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="icon" href="icon.svg">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="manifest" href="manifest.json">
+<title>ガソリン代計算</title>
+<style>
+:root{--bg:#f4f5f7;--card:#fff;--line:#dcdfe4;--txt:#1f2328;--accent:#2a6df4;}
+*{box-sizing:border-box;}
+body{margin:0;padding:12px;background:var(--bg);color:var(--txt);
+font-family:system-ui,"Noto Sans JP",sans-serif;font-size:16px;line-height:1.5;}
+h1{font-size:19px;margin:4px 0 12px;}
+.card{background:var(--card);border-radius:10px;padding:12px;margin-bottom:12px;
+box-shadow:0 1px 3px rgba(0,0,0,.08);}
+.card h2{font-size:15px;margin:0 0 10px;padding-bottom:6px;
+border-bottom:2px solid var(--accent);}
+label{display:block;font-size:12px;color:#5b6270;margin-bottom:3px;}
+input,select{width:100%;padding:10px;font-size:16px;border:1px solid var(--line);
+border-radius:6px;background:#fff;color:var(--txt);}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.mb8{margin-bottom:8px;}
+.row{border:1px solid var(--line);border-radius:8px;padding:8px;
+margin-bottom:8px;background:#fafbfc;}
+.rowtop{display:flex;gap:8px;align-items:center;margin-bottom:6px;}
+.rowtop input{flex:1;}
+.del{flex:0 0 auto;width:42px;height:42px;padding:0;border:none;background:#f0d5d5;
+color:#a33;border-radius:6px;font-size:18px;}
+button{font-size:15px;padding:11px;border-radius:6px;border:none;
+background:var(--accent);color:#fff;width:100%;}
+button.sub{background:#e6ecfb;color:var(--accent);}
+button.gray{background:#e9eaee;color:#555;}
+table{width:100%;border-collapse:collapse;font-size:14px;}
+td{padding:7px 0;border-bottom:1px dashed #e2e4e8;}
+td:last-child{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;}
+.sec{font-weight:600;color:#5b6270;padding-top:10px;}
+.total{font-size:24px;font-weight:700;color:var(--accent);text-align:right;
+margin-top:10px;font-variant-numeric:tabular-nums;}
+.per{font-size:15px;text-align:right;color:#5b6270;}
+.warn{background:#fff5e5;color:#8a5a00;font-size:13px;padding:8px;
+border-radius:6px;margin-top:8px;display:none;}
+.note{font-size:12px;color:#7a808c;margin-top:6px;}
+</style>
+</head>
+<body>
+<h1>ガソリン代計算</h1>
+
+<div class="card"><h2>車とガソリンの設定</h2>
+<div class="grid2 mb8">
+<div>
+<label>燃費・一般道 (km/L)</label>
+<input type="number" id="effCity" inputmode="decimal" step="0.1" min="0" placeholder="15">
+</div>
+<div>
+<label>燃費・高速 (km/L)</label>
+<input type="number" id="effHw" inputmode="decimal" step="0.1" min="0" placeholder="18">
+</div>
+</div>
+<div class="grid2">
+<div>
+<label>ガソリン単価 (円/L)</label>
+<input type="number" id="price" inputmode="decimal" step="0.1" min="0" placeholder="170">
+</div>
+<div>
+<label>人数（割り勘）</label>
+<input type="number" id="people" inputmode="numeric" step="1" min="1" value="1">
+</div>
+</div>
+<div class="note">この設定は自動で保存され、次に開いたときも残ります。</div>
+</div>
+
+<div class="card">
+<h2>行き</h2>
+<div id="goRows"></div>
+<button class="sub mb8" type="button" onclick="addRow('goRows')">＋ 区間を追加</button>
+<label>高速料金・行き (円)</label>
+<input type="number" id="tollGo" inputmode="numeric" step="10" min="0" placeholder="0">
+</div>
+
+<div class="card">
+<h2>帰り</h2>
+<div id="backRows"></div>
+<button class="sub mb8" type="button" onclick="addRow('backRows')">＋ 区間を追加</button>
+<label>高速料金・帰り (円)</label>
+<input type="number" id="tollBack" inputmode="numeric" step="10" min="0" placeholder="0">
+</div>
+
+<div class="card"><h2>結果</h2>
+<table>
+<tr><td class="sec">行き</td><td></td></tr>
+<tr><td>距離</td><td id="rGoKm">0 km</td></tr>
+<tr><td>使用量</td><td id="rGoL">0.00 L</td></tr>
+<tr><td>ガソリン代</td><td id="rGoYen">0 円</td></tr>
+<tr><td class="sec">帰り</td><td></td></tr>
+<tr><td>距離</td><td id="rBackKm">0 km</td></tr>
+<tr><td>使用量</td><td id="rBackL">0.00 L</td></tr>
+<tr><td>ガソリン代</td><td id="rBackYen">0 円</td></tr>
+<tr><td class="sec">合計</td><td></td></tr>
+<tr><td>総距離</td><td id="rAllKm">0 km</td></tr>
+<tr><td>ガソリン代 合計</td><td id="rAllYen">0 円</td></tr>
+<tr><td>高速料金 合計</td><td id="rToll">0 円</td></tr>
+</table>
+<div class="total" id="rTotal">0 円</div>
+<div class="per" id="rPer"></div>
+<div class="warn" id="warn"></div>
+</div>
+
+<div class="card">
+<button class="sub mb8" type="button" onclick="openMaps()">Googleマップで距離を調べる</button>
+<button class="gray" type="button" onclick="clearAll()">入力を全部消す</button>
+</div>
+
+<script>
+"use strict";
+var STORE_KEY = "gasCalc_v1";
+var loading = true;
+
+function num(el){
+  if(!el) return 0;
+  var v = parseFloat(el.value);
+  return isNaN(v) || v < 0 ? 0 : v;
+}
+
+function addRow(containerId, data){
+  data = data || {};
+  var wrap = document.getElementById(containerId);
+  var div = document.createElement("div");
+  div.className = "row";
+  div.innerHTML =
+    '<div class="rowtop">' +
+      '<input type="text" class="memo" placeholder="区間メモ（例: 自宅→道の駅）">' +
+      '<button class="del" type="button">×</button>' +
+    '</div>' +
+    '<div class="grid2">' +
+      '<div><label>距離 (km)</label>' +
+      '<input type="number" class="dist" inputmode="decimal" step="0.1" min="0" placeholder="0"></div>' +
+      '<div><label>道路</label>' +
+      '<select class="road"><option value="city">一般道</option><option value="hw">高速</option></select></div>' +
+    '</div>';
+  wrap.appendChild(div);
+  if(data.memo) div.querySelector(".memo").value = data.memo;
+  if(data.dist !== undefined && data.dist !== "") div.querySelector(".dist").value = data.dist;
+  if(data.road) div.querySelector(".road").value = data.road;
+  calc();
+  if(!loading) save();
+}
+
+document.addEventListener("click", function(e){
+  if(e.target && e.target.classList.contains("del")){
+    var row = e.target.closest(".row");
+    if(row){ row.parentNode.removeChild(row); calc(); save(); }
+  }
+});
+document.addEventListener("input", function(){ calc(); save(); });
+document.addEventListener("change", function(){ calc(); save(); });
+
+function readRows(containerId){
+  var list = [];
+  var rows = document.querySelectorAll("#" + containerId + " .row");
+  for(var i = 0; i < rows.length; i++){
+    list.push({
+      memo: rows[i].querySelector(".memo").value,
+      dist: rows[i].querySelector(".dist").value,
+      road: rows[i].querySelector(".road").value
+    });
+  }
+  return list;
+}
+
+function sumSection(containerId, effCity, effHw){
+  var km = 0, L = 0, missing = false;
+  var rows = document.querySelectorAll("#" + containerId + " .row");
+  for(var i = 0; i < rows.length; i++){
+    var d = num(rows[i].querySelector(".dist"));
+    var road = rows[i].querySelector(".road").value;
+    var eff = (road === "hw") ? effHw : effCity;
+    km += d;
+    if(eff > 0){ L += d / eff; }
+    else if(d > 0){ missing = true; }
+  }
+  return { km: km, L: L, missing: missing };
+}
+
+function yen(n){
+  return Math.round(n).toLocaleString("ja-JP") + " 円";
+}
+
+function calc(){
+  var effCity = num(document.getElementById("effCity"));
+  var effHw   = num(document.getElementById("effHw"));
+  var price   = num(document.getElementById("price"));
+  var people  = Math.max(1, Math.floor(num(document.getElementById("people"))) || 1);
+  var tollGo   = num(document.getElementById("tollGo"));
+  var tollBack = num(document.getElementById("tollBack"));
+
+  var go   = sumSection("goRows", effCity, effHw);
+  var back = sumSection("backRows", effCity, effHw);
+
+  var goYen   = go.L * price;
+  var backYen = back.L * price;
+  var fuelYen = goYen + backYen;
+  var tollYen = tollGo + tollBack;
+  var total   = fuelYen + tollYen;
+
+  document.getElementById("rGoKm").textContent   = go.km.toFixed(1) + " km";
+  document.getElementById("rGoL").textContent    = go.L.toFixed(2) + " L";
+  document.getElementById("rGoYen").textContent  = yen(goYen);
+  document.getElementById("rBackKm").textContent = back.km.toFixed(1) + " km";
+  document.getElementById("rBackL").textContent  = back.L.toFixed(2) + " L";
+  document.getElementById("rBackYen").textContent= yen(backYen);
+  document.getElementById("rAllKm").textContent  = (go.km + back.km).toFixed(1) + " km";
+  document.getElementById("rAllYen").textContent = yen(fuelYen);
+  document.getElementById("rToll").textContent   = yen(tollYen);
+  document.getElementById("rTotal").textContent  = yen(total);
+
+  var per = document.getElementById("rPer");
+  if(people > 1){
+    per.textContent = people + "人で割ると 1人あたり "
+      + Math.ceil(total / people).toLocaleString("ja-JP") + " 円";
+  } else {
+    per.textContent = "";
+  }
+
+  var warn = document.getElementById("warn");
+  var msg = [];
+  if(go.missing || back.missing) msg.push("燃費が未入力の道路種別があります。");
+  if(price <= 0 && (go.km > 0 || back.km > 0)) msg.push("ガソリン単価が未入力です。");
+  if(msg.length){
+    warn.textContent = msg.join(" ");
+    warn.style.display = "block";
+  } else {
+    warn.style.display = "none";
+  }
+}
+
+function save(){
+  try{
+    var data = {
+      effCity: document.getElementById("effCity").value,
+      effHw:   document.getElementById("effHw").value,
+      price:   document.getElementById("price").value,
+      people:  document.getElementById("people").value,
+      tollGo:  document.getElementById("tollGo").value,
+      tollBack:document.getElementById("tollBack").value,
+      go:   readRows("goRows"),
+      back: readRows("backRows")
+    };
+    localStorage.setItem(STORE_KEY, JSON.stringify(data));
+  }catch(e){ /* 保存できない環境では何もしない */ }
+}
+
+function load(){
+  var data = null;
+  try{
+    var raw = localStorage.getItem(STORE_KEY);
+    if(raw) data = JSON.parse(raw);
+  }catch(e){ data = null; }
+
+  if(data){
+    if(data.effCity  !== undefined) document.getElementById("effCity").value = data.effCity;
+    if(data.effHw    !== undefined) document.getElementById("effHw").value   = data.effHw;
+    if(data.price    !== undefined) document.getElementById("price").value   = data.price;
+    if(data.people   !== undefined) document.getElementById("people").value  = data.people;
+    if(data.tollGo   !== undefined) document.getElementById("tollGo").value  = data.tollGo;
+    if(data.tollBack !== undefined) document.getElementById("tollBack").value= data.tollBack;
+  }
+
+  var goList   = (data && data.go   && data.go.length)   ? data.go   : [{}];
+  var backList = (data && data.back && data.back.length) ? data.back : [{}];
+  for(var i = 0; i < goList.length; i++)   addRow("goRows", goList[i]);
+  for(var j = 0; j < backList.length; j++) addRow("backRows", backList[j]);
+
+  calc();
+  loading = false;
+}
+
+function openMaps(){
+  window.open("https://www.google.com/maps/dir/?api=1&travelmode=driving", "_blank");
+}
+
+function clearAll(){
+  if(!confirm("入力内容をすべて消します。よろしいですか？")) return;
+  try{ localStorage.removeItem(STORE_KEY); }catch(e){}
+  location.reload();
+}
+
+load();
+
+if("serviceWorker" in navigator){
+  window.addEventListener("load", function(){
+    navigator.serviceWorker.register("sw.js").catch(function(){});
+  });
+}
+</script>
+</body>
+</html>
